@@ -1,0 +1,13 @@
+db:
+
+  user: postgres
+  host: localhost:5438
+  name: postgres
+  disableTLS: disable
+
+web:
+
+  address: localhost:7000
+  readtimeout: "5s"
+  writetimeout: "5s"
+  shutdowntimeout: "5s"

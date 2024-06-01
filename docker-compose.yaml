@@ -13,4 +13,4 @@ services:
     ports:
       - 5438:5432
     environment:
-      POSTGRES_PASSWORD: example
+      - POSTGRES_PASSWORD=example
