@@ -27,6 +27,12 @@ func main() {
 	log.Println("started")
 	defer log.Println("finished")
 
+	cfg.DB.Name = viper.GetString("db.name")
+	cfg.DB.User = viper.GetString("db.user")
+	cfg.DB.Host = viper.GetString("db.host")
+	cfg.DB.DisableTLS = viper.GetString("db.disableTLS")
+	cfg.DB.Password = os.Getenv("DB_PASSWORD")
+
 	if err := initConfig(); err != nil {
 		log.Fatalf("error initializing configs: %s", err.Error())
 	}
@@ -36,11 +42,11 @@ func main() {
 	}
 
 	db, err := database.OpenDB(database.Config{
-		Host:       viper.GetString("db.host"),
-		User:       viper.GetString("db.user"),
-		Password:   os.Getenv("DB_PASSWORD"),
-		Name:       viper.GetString("db.name"),
-		DisableTLS: viper.GetString("db.disableTLS"),
+		Host:       cfg.DB.Host,
+		User:       cfg.DB.User,
+		Password:   cfg.DB.Password,
+		Name:       cfg.DB.Name,
+		DisableTLS: cfg.DB.DisableTLS,
 	})
 	if err != nil {
 		log.Fatalf("error connect to DB %v", err)

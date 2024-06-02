@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -45,13 +44,19 @@ func main() {
 	if err := godotenv.Load("./cmd/sales-api/.env"); err != nil {
 		log.Fatalf("error loading env variables: %s", err.Error())
 	}
-	fmt.Println("DB_PASSWORD:", os.Getenv("DB_PASSWORD"))
+
+	cfg.DB.Name = viper.GetString("db.name")
+	cfg.DB.User = viper.GetString("db.user")
+	cfg.DB.Host = viper.GetString("db.host")
+	cfg.DB.DisableTLS = viper.GetString("db.disableTLS")
+	cfg.DB.Password = os.Getenv("DB_PASSWORD")
+
 	db, err := database.OpenDB(database.Config{
-		Host:       viper.GetString("db.host"),
-		User:       viper.GetString("db.user"),
-		Password:   os.Getenv("DB_PASSWORD"),
-		Name:       viper.GetString("db.name"),
-		DisableTLS: viper.GetString("db.disableTLS"),
+		Host:       cfg.DB.Host,
+		User:       cfg.DB.User,
+		Password:   cfg.DB.Password,
+		Name:       cfg.DB.Name,
+		DisableTLS: cfg.DB.DisableTLS,
 	})
 	if err != nil {
 		log.Fatalf("error connect to DB %v", err)
@@ -60,14 +65,16 @@ func main() {
 
 	ps := handlers.Product{DB: db}
 
-	readTimeout := viper.GetDuration("web.readtimeout")
-	writeTimeout := viper.GetDuration("web.writetimeout")
+	cfg.Web.ReadTimeout = viper.GetDuration("web.readtimeout")
+	cfg.Web.WriteTimeout = viper.GetDuration("web.writetimeout")
+	cfg.Web.ShutdownTimeout = viper.GetDuration("web.shutdowntimeout")
+	cfg.Web.Address = viper.GetString("web.address")
 
 	api := http.Server{
-		Addr:         viper.GetString("web.address"),
+		Addr:         cfg.Web.Address,
 		Handler:      http.HandlerFunc(ps.List),
-		ReadTimeout:  readTimeout,
-		WriteTimeout: writeTimeout,
+		ReadTimeout:  cfg.Web.ReadTimeout,
+		WriteTimeout: cfg.Web.WriteTimeout,
 	}
 
 	serverErrors := make(chan error, 1)
