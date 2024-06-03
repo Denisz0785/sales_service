@@ -11,13 +11,19 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-faster/errors"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/spf13/viper"
 )
 
 func main() {
-
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
+func run() error {
+	log := log.New(os.Stdout, "Sales : ", log.LstdFlags|log.Lshortfile)
 	var cfg struct {
 		DB struct {
 			User       string
@@ -38,11 +44,11 @@ func main() {
 	defer log.Println("finished")
 
 	if err := initConfig(); err != nil {
-		log.Fatalf("error initializing configs: %s", err.Error())
+		return errors.Wrap(err, "error initializing configs")
 	}
 
 	if err := godotenv.Load("./cmd/sales-api/.env"); err != nil {
-		log.Fatalf("error loading env variables: %s", err.Error())
+		return errors.Wrap(err, "error of loading env variables")
 	}
 
 	cfg.DB.Name = viper.GetString("db.name")
@@ -59,11 +65,11 @@ func main() {
 		DisableTLS: cfg.DB.DisableTLS,
 	})
 	if err != nil {
-		log.Fatalf("error connect to DB %v", err)
+		return errors.Wrap(err, "error connect to DB")
 	}
 	defer db.Close()
 
-	ps := handlers.Product{DB: db}
+	ps := handlers.Product{DB: db, Log: log}
 
 	cfg.Web.ReadTimeout = viper.GetDuration("web.readtimeout")
 	cfg.Web.WriteTimeout = viper.GetDuration("web.writetimeout")
@@ -90,7 +96,7 @@ func main() {
 
 	select {
 	case err := <-serverErrors:
-		log.Printf("error of listenig %v", err)
+		errors.Wrap(err, "error of run and listennig server")
 	case <-shutdown:
 		log.Println("starting shutdown")
 
@@ -103,9 +109,10 @@ func main() {
 			err = api.Close()
 		}
 		if err != nil {
-			log.Fatalf("could not stop server gracefully %v", err)
+			return errors.Wrap(err, "could not stop server gracefully")
 		}
 	}
+	return nil
 }
 
 func initConfig() error {

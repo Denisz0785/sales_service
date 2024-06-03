@@ -8,12 +8,21 @@ import (
 	"sales_service/internal/platform/database"
 	"sales_service/internal/schema"
 
+	"github.com/go-faster/errors"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+
 	"github.com/spf13/viper"
 )
 
 func main() {
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func run() error {
+
 	var cfg struct {
 		DB struct {
 			User       string
@@ -34,11 +43,11 @@ func main() {
 	cfg.DB.Password = os.Getenv("DB_PASSWORD")
 
 	if err := initConfig(); err != nil {
-		log.Fatalf("error initializing configs: %s", err.Error())
+		return errors.Wrap(err, "error initializing configs")
 	}
 
 	if err := godotenv.Load("./cmd/sales-api/.env"); err != nil {
-		log.Fatalf("error loading env variables: %s", err.Error())
+		return errors.Wrap(err, "error loading env variables")
 	}
 
 	db, err := database.OpenDB(database.Config{
@@ -49,7 +58,7 @@ func main() {
 		DisableTLS: cfg.DB.DisableTLS,
 	})
 	if err != nil {
-		log.Fatalf("error connect to DB %v", err)
+		return errors.Wrap(err, "error connecting to db")
 	}
 	defer db.Close()
 
@@ -57,17 +66,18 @@ func main() {
 	switch flag.Arg(0) {
 	case "migrate":
 		if err := schema.Migrate(db); err != nil {
-			log.Fatal("doing migrate", err)
+			return errors.Wrap(err, "doing migrate")
 		}
 		log.Println("Migrations completed")
-		return
+		return nil
 	case "seed":
 		if err := schema.Seed(db); err != nil {
-			log.Fatal("doing insert data", err)
+			return errors.Wrap(err, "doing insert data")
 		}
 		log.Println("Insert data completed")
-		return
+		return nil
 	}
+	return nil
 
 }
 func initConfig() error {

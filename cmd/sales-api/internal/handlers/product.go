@@ -11,7 +11,8 @@ import (
 
 // Product has methods for dealing with Products
 type Product struct {
-	DB *sqlx.DB
+	DB  *sqlx.DB
+	Log *log.Logger
 }
 
 // List send all products as list
@@ -21,20 +22,46 @@ func (p *Product) List(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		log.Println("error query to db", err)
+		p.Log.Println("error query to db", err)
 		return
 	}
 
 	data, err := json.Marshal(list)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		log.Println("error marshalling", err)
+		p.Log.Println("error marshalling", err)
 		return
 	}
 
 	w.Header().Set("content-type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write(data); err != nil {
-		log.Println("error writing", err)
+		p.Log.Println("error writing", err)
+	}
+}
+
+func (p *Product) Retrieve(w http.ResponseWriter, r *http.Request) {
+
+	id := "TODO"
+
+	prod, err := product.Retrieve(p.DB, id)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		p.Log.Println("error query to db", err)
+		return
+	}
+
+	data, err := json.Marshal(prod)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		p.Log.Println("error marshalling", err)
+		return
+	}
+
+	w.Header().Set("content-type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if _, err := w.Write(data); err != nil {
+		p.Log.Println("error writing", err)
 	}
 }
