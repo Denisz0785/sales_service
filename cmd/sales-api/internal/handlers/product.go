@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sales_service/internal/product"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -42,7 +43,7 @@ func (p *Product) List(w http.ResponseWriter, r *http.Request) {
 
 func (p *Product) Retrieve(w http.ResponseWriter, r *http.Request) {
 
-	id := "TODO"
+	id := chi.URLParam(r, "id")
 
 	prod, err := product.Retrieve(p.DB, id)
 

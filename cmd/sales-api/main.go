@@ -69,8 +69,6 @@ func run() error {
 	}
 	defer db.Close()
 
-	ps := handlers.Product{DB: db, Log: log}
-
 	cfg.Web.ReadTimeout = viper.GetDuration("web.readtimeout")
 	cfg.Web.WriteTimeout = viper.GetDuration("web.writetimeout")
 	cfg.Web.ShutdownTimeout = viper.GetDuration("web.shutdowntimeout")
@@ -78,7 +76,7 @@ func run() error {
 
 	api := http.Server{
 		Addr:         cfg.Web.Address,
-		Handler:      http.HandlerFunc(ps.List),
+		Handler:      handlers.API(log, db),
 		ReadTimeout:  cfg.Web.ReadTimeout,
 		WriteTimeout: cfg.Web.WriteTimeout,
 	}
