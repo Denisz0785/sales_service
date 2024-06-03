@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
+	"sales_service/internal/platform/web"
 	"sales_service/internal/product"
 	"time"
 
@@ -18,31 +18,20 @@ type Product struct {
 }
 
 // List send all products as list
-func (p *Product) List(w http.ResponseWriter, r *http.Request) {
+func (p *Product) List(w http.ResponseWriter, r *http.Request) error {
 
 	list, err := product.List(p.DB)
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		p.Log.Println("error query to db", err)
-		return
+		return err
 	}
 
-	data, err := json.Marshal(list)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		p.Log.Println("error marshalling", err)
-		return
-	}
-
-	w.Header().Set("content-type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	if _, err := w.Write(data); err != nil {
-		p.Log.Println("error writing", err)
-	}
+	return web.Respond(w, list, http.StatusOK)
 }
 
-func (p *Product) Retrieve(w http.ResponseWriter, r *http.Request) {
+func (p *Product) Retrieve(w http.ResponseWriter, r *http.Request) error {
 
 	id := chi.URLParam(r, "id")
 
@@ -51,50 +40,24 @@ func (p *Product) Retrieve(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		p.Log.Println("error query to db", err)
-		return
+		return err
 	}
 
-	data, err := json.Marshal(prod)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		p.Log.Println("error marshalling", err)
-		return
-	}
-
-	w.Header().Set("content-type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	if _, err := w.Write(data); err != nil {
-		p.Log.Println("error writing", err)
-	}
+	return web.Respond(w, prod, http.StatusOK)
 }
 
-func (p *Product) Create(w http.ResponseWriter, r *http.Request) {
+func (p *Product) Create(w http.ResponseWriter, r *http.Request) error {
 
 	var newProduct product.NewProduct
-	if err := json.NewDecoder(r.Body).Decode(&newProduct); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		p.Log.Println("error decoding", err)
-		return
+	if err := web.Decode(r, &newProduct); err != nil {
+		return err
 	}
 
 	prod, err := product.Create(p.DB, newProduct, time.Now())
-
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		p.Log.Println("error query to db", err)
-		return
+		return err
 	}
 
-	data, err := json.Marshal(prod)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		p.Log.Println("error marshalling", err)
-		return
-	}
+	return web.Respond(w, prod, http.StatusCreated)
 
-	w.Header().Set("content-type", "application/json;charset=utf-8")
-	w.WriteHeader(http.StatusCreated)
-	if _, err := w.Write(data); err != nil {
-		p.Log.Println("error writing", err)
-	}
 }
