@@ -1,6 +1,12 @@
 package product
 
-import "github.com/jmoiron/sqlx"
+import (
+	"time"
+
+	"github.com/go-faster/errors"
+	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
+)
 
 // List retrieves all products from the database.
 func List(db *sqlx.DB) ([]Product, error) {
@@ -38,4 +44,25 @@ func Retrieve(db *sqlx.DB, id string) (*Product, error) {
 
 	// Return the retrieved Product and nil for the error.
 	return &p, nil
+}
+
+// Create inserts a new product into the database
+func Create(db *sqlx.DB, newProduct NewProduct, currentTime time.Time) (*Product, error) {
+	product := &Product{
+		ID:          uuid.New().String(),
+		Name:        newProduct.Name,
+		Cost:        newProduct.Cost,
+		Quantity:    newProduct.Quantity,
+		DateCreated: currentTime,
+		DateUpdated: currentTime,
+	}
+
+	const query = `INSERT INTO products(id, name, cost, quantity, date_created, date_updated) VALUES($1, $2, $3, $4, $5, $6)`
+
+	_, err := db.Exec(query, product.ID, product.Name, product.Cost, product.Quantity, product.DateCreated, product.DateUpdated)
+	if err != nil {
+		return nil, errors.Wrapf(err, "inserting product: %v", product)
+	}
+
+	return product, nil
 }

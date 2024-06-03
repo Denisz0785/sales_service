@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"sales_service/internal/product"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jmoiron/sqlx"
@@ -62,6 +63,37 @@ func (p *Product) Retrieve(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("content-type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	if _, err := w.Write(data); err != nil {
+		p.Log.Println("error writing", err)
+	}
+}
+
+func (p *Product) Create(w http.ResponseWriter, r *http.Request) {
+
+	var newProduct product.NewProduct
+	if err := json.NewDecoder(r.Body).Decode(&newProduct); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		p.Log.Println("error decoding", err)
+		return
+	}
+
+	prod, err := product.Create(p.DB, newProduct, time.Now())
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		p.Log.Println("error query to db", err)
+		return
+	}
+
+	data, err := json.Marshal(prod)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		p.Log.Println("error marshalling", err)
+		return
+	}
+
+	w.Header().Set("content-type", "application/json;charset=utf-8")
+	w.WriteHeader(http.StatusCreated)
 	if _, err := w.Write(data); err != nil {
 		p.Log.Println("error writing", err)
 	}

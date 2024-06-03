@@ -27,8 +27,13 @@ func NewApp(log *log.Logger) *App {
 // and the pattern. The handler function will be called when the
 // pattern is matched.
 
+// Handle registers a new route with a matcher for the HTTP method
+// and the pattern. The handler function will be called when the
+// pattern is matched.
+
 func (a *App) Handle(method, pattern string, fn http.HandlerFunc) {
 	// Register the route with the router.
+	// The router routes the HTTP request to the appropriate handler function based on the HTTP method and the URL pattern.
 	a.mux.MethodFunc(method, pattern, fn)
 }
 
