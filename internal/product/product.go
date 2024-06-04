@@ -1,11 +1,17 @@
 package product
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/go-faster/errors"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+)
+
+var (
+	ErrNotFound  = errors.New("product not found")
+	ErrInvalidID = errors.New("invalid product ID format")
 )
 
 // List retrieves all products from the database.
@@ -28,16 +34,25 @@ func List(db *sqlx.DB) ([]Product, error) {
 
 // Retrieve retrieves a single product from the database
 func Retrieve(db *sqlx.DB, id string) (*Product, error) {
+
+	if _, err := uuid.Parse(id); err != nil {
+		return nil, ErrInvalidID
+	}
+
 	// Create a new Product variable to store the retrieved data.
 	var p Product
 
 	// Define the SQL query to retrieve a single product by ID.
 	const q = `select * from products where id = $1`
 
-	// Call the Select method of the *sqlx.DB connection to execute the query
-	// and store the result in the Product variable.
-	// The $1 placeholder is replaced with the value of the id parameter.
+	// Execute the query to retrieve a single product by ID.
 	if err := db.Get(&p, q, id); err != nil {
+
+		// If it is, return the ErrNotFound error.
+		if err == sql.ErrNoRows {
+			return nil, ErrNotFound
+		}
+
 		// If there is an error, return the empty Product and the error.
 		return nil, err
 	}

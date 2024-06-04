@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-faster/errors"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -38,9 +39,15 @@ func (p *Product) Retrieve(w http.ResponseWriter, r *http.Request) error {
 	prod, err := product.Retrieve(p.DB, id)
 
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		p.Log.Println("error query to db", err)
-		return err
+		switch {
+		case errors.Is(err, product.ErrNotFound):
+			return web.NewRequestError(err, http.StatusNotFound)
+		case errors.Is(err, product.ErrInvalidID):
+			return web.NewRequestError(err, http.StatusBadRequest)
+		default:
+			return errors.Wrapf(err, "looking up product %q", id)
+		}
+
 	}
 
 	return web.Respond(w, prod, http.StatusOK)
