@@ -72,12 +72,13 @@ func Create(db *sqlx.DB, newProduct NewProduct, currentTime time.Time) (*Product
 		DateUpdated: currentTime,
 	}
 
-	const query = `INSERT INTO products(id, name, cost, quantity, date_created, date_updated) VALUES($1, $2, $3, $4, $5, $6)`
+	const query = `INSERT INTO products(id, name, cost, quantity, date_created, date_updated) VALUES($1, $2, $3, $4, $5, $6) RETURNING *`
+	productFromDB := make([]Product, 1)
 
-	_, err := db.Exec(query, product.ID, product.Name, product.Cost, product.Quantity, product.DateCreated, product.DateUpdated)
+	err := db.Select(&productFromDB, query, product.ID, product.Name, product.Cost, product.Quantity, product.DateCreated, product.DateUpdated)
 	if err != nil {
 		return nil, errors.Wrapf(err, "inserting product: %v", product)
 	}
 
-	return product, nil
+	return &productFromDB[0], nil
 }

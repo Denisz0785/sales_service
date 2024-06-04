@@ -50,6 +50,7 @@ func (p *Product) Retrieve(w http.ResponseWriter, r *http.Request) error {
 
 	}
 
+	// Return the product
 	return web.Respond(w, prod, http.StatusOK)
 }
 
