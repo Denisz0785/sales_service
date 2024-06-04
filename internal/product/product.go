@@ -1,6 +1,7 @@
 package product
 
 import (
+	"context"
 	"database/sql"
 	"time"
 
@@ -15,7 +16,7 @@ var (
 )
 
 // List retrieves all products from the database.
-func List(db *sqlx.DB) ([]Product, error) {
+func List(ctx context.Context, db *sqlx.DB) ([]Product, error) {
 	// Create a slice to store the retrieved data.
 	var list []Product
 
@@ -24,7 +25,7 @@ func List(db *sqlx.DB) ([]Product, error) {
 
 	// Use the Select method of the sqlx.DB connection to execute the query
 	// and store the result in the list variable.
-	if err := db.Select(&list, query); err != nil {
+	if err := db.SelectContext(ctx, &list, query); err != nil {
 		return nil, err
 	}
 
@@ -33,7 +34,7 @@ func List(db *sqlx.DB) ([]Product, error) {
 }
 
 // Retrieve retrieves a single product from the database
-func Retrieve(db *sqlx.DB, id string) (*Product, error) {
+func Retrieve(ctx context.Context, db *sqlx.DB, id string) (*Product, error) {
 
 	if _, err := uuid.Parse(id); err != nil {
 		return nil, ErrInvalidID
@@ -46,7 +47,7 @@ func Retrieve(db *sqlx.DB, id string) (*Product, error) {
 	const q = `select * from products where id = $1`
 
 	// Execute the query to retrieve a single product by ID.
-	if err := db.Get(&p, q, id); err != nil {
+	if err := db.GetContext(ctx, &p, q, id); err != nil {
 
 		// If it is, return the ErrNotFound error.
 		if err == sql.ErrNoRows {
@@ -62,7 +63,7 @@ func Retrieve(db *sqlx.DB, id string) (*Product, error) {
 }
 
 // Create inserts a new product into the database
-func Create(db *sqlx.DB, newProduct NewProduct, currentTime time.Time) (*Product, error) {
+func Create(ctx context.Context, db *sqlx.DB, newProduct NewProduct, currentTime time.Time) (*Product, error) {
 	product := &Product{
 		ID:          uuid.New().String(),
 		Name:        newProduct.Name,
@@ -75,7 +76,7 @@ func Create(db *sqlx.DB, newProduct NewProduct, currentTime time.Time) (*Product
 	const query = `INSERT INTO products(id, name, cost, quantity, date_created, date_updated) VALUES($1, $2, $3, $4, $5, $6) RETURNING *`
 	productFromDB := make([]Product, 1)
 
-	err := db.Select(&productFromDB, query, product.ID, product.Name, product.Cost, product.Quantity, product.DateCreated, product.DateUpdated)
+	err := db.SelectContext(ctx, &productFromDB, query, product.ID, product.Name, product.Cost, product.Quantity, product.DateCreated, product.DateUpdated)
 	if err != nil {
 		return nil, errors.Wrapf(err, "inserting product: %v", product)
 	}

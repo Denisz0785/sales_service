@@ -21,7 +21,9 @@ type Product struct {
 // List send all products as list
 func (p *Product) List(w http.ResponseWriter, r *http.Request) error {
 
-	list, err := product.List(p.DB)
+	ctx := r.Context()
+
+	list, err := product.List(ctx, p.DB)
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -35,8 +37,9 @@ func (p *Product) List(w http.ResponseWriter, r *http.Request) error {
 func (p *Product) Retrieve(w http.ResponseWriter, r *http.Request) error {
 
 	id := chi.URLParam(r, "id")
+	ctx := r.Context()
 
-	prod, err := product.Retrieve(p.DB, id)
+	prod, err := product.Retrieve(ctx, p.DB, id)
 
 	if err != nil {
 		switch {
@@ -57,11 +60,13 @@ func (p *Product) Retrieve(w http.ResponseWriter, r *http.Request) error {
 func (p *Product) Create(w http.ResponseWriter, r *http.Request) error {
 
 	var newProduct product.NewProduct
+	ctx := r.Context()
+
 	if err := web.Decode(r, &newProduct); err != nil {
 		return err
 	}
 
-	prod, err := product.Create(p.DB, newProduct, time.Now())
+	prod, err := product.Create(ctx, p.DB, newProduct, time.Now())
 	if err != nil {
 		return err
 	}

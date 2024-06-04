@@ -1,6 +1,7 @@
 package product
 
 import (
+	"context"
 	"sales_service/internal/platform/database/databasetest"
 	"sales_service/internal/schema"
 
@@ -14,18 +15,20 @@ func TestProducts(t *testing.T) {
 	db, teardown := databasetest.Setup(t)
 	defer teardown()
 
+	ctx := context.Background()
+
 	NewProduct := NewProduct{
 		Name:     "test product",
 		Cost:     10,
 		Quantity: 20,
 	}
 	now := time.Date(2024, 5, 5, 5, 5, 5, 0, time.UTC)
-	product1, err := Create(db, NewProduct, now)
+	product1, err := Create(ctx, db, NewProduct, now)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	product2, err := Retrieve(db, product1.ID)
+	product2, err := Retrieve(ctx, db, product1.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,11 +42,13 @@ func TestProductList(t *testing.T) {
 	db, teardown := databasetest.Setup(t)
 	defer teardown()
 
+	ctx := context.Background()
+
 	if err := schema.Seed(db); err != nil {
 		t.Fatal(err)
 	}
 
-	products, err := List(db)
+	products, err := List(ctx, db)
 	if err != nil {
 		t.Fatal(err)
 	}
