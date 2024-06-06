@@ -35,6 +35,9 @@ func API(logger *log.Logger, db *sqlx.DB) http.Handler {
 	// Register route for updating an existing product
 	app.Handle(http.MethodPut, "/v1/products/{id}", p.Update)
 
+	// Register route for deleting an existing product
+	app.Handle(http.MethodDelete, "/v1/products/{id}", p.Delete)
+
 	// Return the web application as an http.Handler
 	return app
 }

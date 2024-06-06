@@ -97,6 +97,22 @@ func (p *Product) Update(w http.ResponseWriter, r *http.Request) error {
 	return web.Respond(w, nil, http.StatusNoContent)
 }
 
+func (p *Product) Delete(w http.ResponseWriter, r *http.Request) error {
+	id := chi.URLParam(r, "id")
+
+	err := product.Delete(r.Context(), p.DB, id)
+	if err != nil {
+		switch err {
+		case product.ErrInvalidID:
+			return web.NewRequestError(err, http.StatusBadRequest)
+		default:
+			return errors.Wrap(err, "deleting product")
+		}
+	}
+
+	return web.Respond(w, nil, http.StatusNoContent)
+}
+
 func (p *Product) AddSale(w http.ResponseWriter, r *http.Request) error {
 	var newSale product.NewSale
 	if err := web.Decode(r, &newSale); err != nil {
