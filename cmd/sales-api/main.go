@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	_ "net/http/pprof" //register pprof handlers
 	"os"
 	"os/signal"
 	"sales_service/cmd/sales-api/internal/handlers"
@@ -34,6 +35,7 @@ func run() error {
 		}
 		Web struct {
 			Address         string
+			Debug           string
 			ReadTimeout     time.Duration
 			WriteTimeout    time.Duration
 			ShutdownTimeout time.Duration
@@ -54,6 +56,7 @@ func run() error {
 	cfg.DB.Name = viper.GetString("db.name")
 	cfg.DB.User = viper.GetString("db.user")
 	cfg.DB.Host = viper.GetString("db.host")
+
 	cfg.DB.DisableTLS = viper.GetString("db.disableTLS")
 	cfg.DB.Password = os.Getenv("DB_PASSWORD")
 
@@ -73,6 +76,16 @@ func run() error {
 	cfg.Web.WriteTimeout = viper.GetDuration("web.writetimeout")
 	cfg.Web.ShutdownTimeout = viper.GetDuration("web.shutdowntimeout")
 	cfg.Web.Address = viper.GetString("web.address")
+	cfg.Web.Debug = viper.GetString("web.debug")
+
+	// start Debug Service
+	go func() {
+		log.Printf("Debug service started on %s", cfg.Web.Debug)
+		err := http.ListenAndServe(cfg.Web.Debug, http.DefaultServeMux)
+		if err != nil {
+			log.Printf("Debug service error: %v", err)
+		}
+	}()
 
 	api := http.Server{
 		Addr:         cfg.Web.Address,

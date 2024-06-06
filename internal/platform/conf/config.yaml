@@ -8,6 +8,7 @@ db:
 web:
 
   address: localhost:7000
+  debug: localhost:7001
   readtimeout: "5s"
   writetimeout: "5s"
   shutdowntimeout: "5s"
