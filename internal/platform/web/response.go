@@ -11,6 +11,11 @@ import (
 // Respond writes the provided value to the http.ResponseWriter with the specified
 // status code.
 func Respond(w http.ResponseWriter, val interface{}, statusCode int) error {
+
+	if statusCode == http.StatusNoContent {
+		w.WriteHeader(statusCode)
+		return nil
+	}
 	// Marshal the value to JSON
 	data, err := json.Marshal(val)
 	if err != nil {

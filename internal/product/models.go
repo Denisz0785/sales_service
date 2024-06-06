@@ -19,6 +19,14 @@ type NewProduct struct {
 	Quantity int    `json:"quantity" validate:"gte=1"`
 }
 
+// UpdateProduct represents a request to update a product.
+// The fields are pointers so that one can specify only the fields that need to be updated.
+type UpdateProduct struct {
+	Name     *string `json:"name"`
+	Cost     *int    `json:"cost" validate:"omitempty,gte=0"`
+	Quantity *int    `json:"quantity" validate:"omitempty,gte=1"`
+}
+
 type Sale struct {
 	ID          string    `db:"sale_id" json:"id"`
 	ProductID   string    `db:"product_id" json:"product_id"`

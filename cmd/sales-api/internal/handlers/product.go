@@ -76,6 +76,27 @@ func (p *Product) Create(w http.ResponseWriter, r *http.Request) error {
 
 }
 
+func (p *Product) Update(w http.ResponseWriter, r *http.Request) error {
+	id := chi.URLParam(r, "id")
+
+	var update product.UpdateProduct
+	if err := web.Decode(r, &update); err != nil {
+		return errors.Wrap(err, "decode update product")
+	}
+
+	if err := product.Update(r.Context(), p.DB, id, update, time.Now()); err != nil {
+		switch err {
+		case product.ErrNotFound:
+			return web.NewRequestError(err, http.StatusNotFound)
+		case product.ErrInvalidID:
+			return web.NewRequestError(err, http.StatusBadRequest)
+		default:
+			return errors.Wrap(err, "updating product")
+		}
+	}
+	return web.Respond(w, nil, http.StatusNoContent)
+}
+
 func (p *Product) AddSale(w http.ResponseWriter, r *http.Request) error {
 	var newSale product.NewSale
 	if err := web.Decode(r, &newSale); err != nil {

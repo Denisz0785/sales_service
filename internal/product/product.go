@@ -94,3 +94,34 @@ func Create(ctx context.Context, db *sqlx.DB, newProduct NewProduct, currentTime
 
 	return &productFromDB[0], nil
 }
+
+func Update(ctx context.Context, db *sqlx.DB, id string, update UpdateProduct, now time.Time) error {
+
+	product, err := Retrieve(ctx, db, id)
+	if err != nil {
+		return errors.Wrap(err, "updating product")
+	}
+	if update.Name != nil {
+		product.Name = *update.Name
+	}
+	if update.Cost != nil {
+		product.Cost = *update.Cost
+	}
+	if update.Quantity != nil {
+		product.Quantity = *update.Quantity
+	}
+	product.DateUpdated = now
+
+	const q = `UPDATE products SET 
+	name = $1, cost = $2,
+	quantity = $3,
+	date_updated = $4 WHERE id = $5`
+
+	_, err = db.ExecContext(ctx, q, product.Name, product.Cost,
+		product.Quantity, product.DateUpdated, product.ID)
+
+	if err != nil {
+		return errors.Wrap(err, "updating product")
+	}
+	return nil
+}
