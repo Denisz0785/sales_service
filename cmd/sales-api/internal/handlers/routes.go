@@ -26,6 +26,12 @@ func API(logger *log.Logger, db *sqlx.DB) http.Handler {
 	// Register route for creating a new product
 	app.Handle(http.MethodPost, "/v1/products", p.Create)
 
+	// Add a new sale to an existing product
+	app.Handle(http.MethodPost, "/v1/products/{id}/sales", p.AddSale)
+
+	// List all sales for an existing product
+	app.Handle(http.MethodGet, "/v1/products/{id}/sales", p.ListSales)
+
 	// Return the web application as an http.Handler
 	return app
 }

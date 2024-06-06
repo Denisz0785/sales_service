@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"sales_service/internal/platform/web"
@@ -73,4 +74,31 @@ func (p *Product) Create(w http.ResponseWriter, r *http.Request) error {
 
 	return web.Respond(w, prod, http.StatusCreated)
 
+}
+
+func (p *Product) AddSale(w http.ResponseWriter, r *http.Request) error {
+	var newSale product.NewSale
+	if err := web.Decode(r, &newSale); err != nil {
+		return errors.Wrap(err, "decode new sale")
+	}
+
+	productID := chi.URLParam(r, "id")
+	fmt.Println("productID", productID)
+
+	sale, err := product.AddSale(r.Context(), p.DB, newSale, productID, time.Now())
+
+	if err != nil {
+		return errors.Wrap(err, "add sale")
+	}
+
+	return web.Respond(w, sale, http.StatusCreated)
+}
+
+func (p *Product) ListSales(w http.ResponseWriter, r *http.Request) error {
+	productID := chi.URLParam(r, "id")
+	list, err := product.ListSales(r.Context(), p.DB, productID)
+	if err != nil {
+		return errors.Wrap(err, " gettinglist sales")
+	}
+	return web.Respond(w, list, http.StatusOK)
 }

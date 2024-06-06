@@ -21,7 +21,12 @@ func List(ctx context.Context, db *sqlx.DB) ([]Product, error) {
 	var list []Product
 
 	// Define the SQL query to retrieve all products.
-	const query = `select * from products`
+	const query = `select p.id, p.name, p.cost, p.quantity,
+	COALESCE(SUM(s.paid),0) as revenue,
+	COALESCE(SUM(s.quantity),0) AS sold,
+	p.date_created, p.date_updated from products AS p
+	LEFT JOIN sales AS s ON p.id = s.product_id 
+	Group BY p.id, p.name, p.cost, p.quantity, p.date_created, p.date_updated`
 
 	// Use the Select method of the sqlx.DB connection to execute the query
 	// and store the result in the list variable.
@@ -44,7 +49,13 @@ func Retrieve(ctx context.Context, db *sqlx.DB, id string) (*Product, error) {
 	var p Product
 
 	// Define the SQL query to retrieve a single product by ID.
-	const q = `select * from products where id = $1`
+	const q = `select p.id, p.name, p.cost, p.quantity,
+	COALESCE(SUM(s.paid),0) as revenue,
+	COALESCE(SUM(s.quantity),0) AS sold,
+	p.date_created, p.date_updated from products AS p
+	LEFT JOIN sales AS s ON p.id = s.product_id 
+	Group BY p.id, p.name, p.cost, p.quantity, p.date_created, p.date_updated
+	HAVING p.id = $1`
 
 	// Execute the query to retrieve a single product by ID.
 	if err := db.GetContext(ctx, &p, q, id); err != nil {

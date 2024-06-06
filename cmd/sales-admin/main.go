@@ -36,12 +36,6 @@ func run() error {
 	log.Println("started")
 	defer log.Println("finished")
 
-	cfg.DB.Name = viper.GetString("db.name")
-	cfg.DB.User = viper.GetString("db.user")
-	cfg.DB.Host = viper.GetString("db.host")
-	cfg.DB.DisableTLS = viper.GetString("db.disableTLS")
-	cfg.DB.Password = os.Getenv("DB_PASSWORD")
-
 	if err := initConfig(); err != nil {
 		return errors.Wrap(err, "error initializing configs")
 	}
@@ -49,6 +43,12 @@ func run() error {
 	if err := godotenv.Load("./cmd/sales-api/.env"); err != nil {
 		return errors.Wrap(err, "error loading env variables")
 	}
+
+	cfg.DB.Name = viper.GetString("db.name")
+	cfg.DB.User = viper.GetString("db.user")
+	cfg.DB.Host = viper.GetString("db.host")
+	cfg.DB.DisableTLS = viper.GetString("db.disableTLS")
+	cfg.DB.Password = os.Getenv("DB_PASSWORD")
 
 	db, err := database.OpenDB(database.Config{
 		Host:       cfg.DB.Host,
