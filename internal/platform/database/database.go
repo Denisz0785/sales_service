@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"net/url"
 
 	"github.com/jmoiron/sqlx"
@@ -33,4 +34,18 @@ func OpenDB(cfg Config) (*sqlx.DB, error) {
 	}
 
 	return sqlx.Open("postgres", u.String())
+}
+
+// StatusCheck checks if the database is reachable.
+func StatusCheck(ctx context.Context, db *sqlx.DB) error {
+
+	// The query to send to the database.
+	const q = `SELECT true`
+
+	// Variable to store the result of the query.
+	var status bool
+
+	// Send the query to the database and store the result in the status variable.
+	return db.QueryRowContext(ctx, q).Scan(&status)
+
 }

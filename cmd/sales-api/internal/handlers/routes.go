@@ -16,6 +16,7 @@ func API(logger *log.Logger, db *sqlx.DB) http.Handler {
 
 	// Create a new Product with the database connection and logger
 	p := &Product{DB: db, Log: logger}
+	c := &Check{DB: db}
 
 	// Register routes for retrieving all products
 	app.Handle(http.MethodGet, "/v1/products", p.List)
@@ -37,6 +38,9 @@ func API(logger *log.Logger, db *sqlx.DB) http.Handler {
 
 	// Register route for deleting an existing product
 	app.Handle(http.MethodDelete, "/v1/products/{id}", p.Delete)
+
+	// Register route for checking status of database
+	app.Handle(http.MethodGet, "/v1/health", c.Health)
 
 	// Return the web application as an http.Handler
 	return app
