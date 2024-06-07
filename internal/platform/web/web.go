@@ -17,19 +17,23 @@ type App struct {
 	mux *chi.Mux
 	// Log is the logger for logging information.
 	log *log.Logger
+	mw  []Middleware
 }
 
 // NewApp creates a new web application.
-func NewApp(log *log.Logger) *App {
+func NewApp(logger *log.Logger, mw ...Middleware) *App {
 	return &App{
 		mux: chi.NewRouter(), // Initialize a new router.
-		log: log,             // Set the logger.
+		log: logger,
+		mw:  mw, // Set the logger.
 	}
 }
 
 // Handle registers a new route with a matcher for the HTTP method
 // and the pattern.
 func (a *App) Handle(method, pattern string, h Handler) {
+
+	h = wrapMiddleware(a.mw, h)
 
 	// fn is the actual handler function that will be registered with the router.
 	// It calls the handler function h and handles any errors.
@@ -38,11 +42,8 @@ func (a *App) Handle(method, pattern string, h Handler) {
 		// Call the handler function h with the request and response objects.
 		if err := h(w, r); err != nil {
 			// If there is an error, create an ErrorResponse object with the error message.
-			a.log.Printf("Error handling request: %s", err)
+			a.log.Printf("Error: Unhandled error %v", err)
 
-			if err := RespondError(w, err); err != nil {
-				a.log.Printf("Error writing response: %s", err)
-			}
 		}
 	}
 

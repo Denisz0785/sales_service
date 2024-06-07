@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 
+	mid "sales_service/internal/mid"
 	"sales_service/internal/platform/web"
 
 	"github.com/jmoiron/sqlx"
@@ -12,7 +13,7 @@ import (
 // API creates a new web application with routes for handling Products.
 func API(logger *log.Logger, db *sqlx.DB) http.Handler {
 	// Create a new web application with the logger
-	app := web.NewApp(logger)
+	app := web.NewApp(logger, mid.Errors(logger))
 
 	// Create a new Product with the database connection and logger
 	p := &Product{DB: db, Log: logger}
