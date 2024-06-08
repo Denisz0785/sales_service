@@ -32,7 +32,7 @@ func (p *Product) List(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	return web.Respond(w, list, http.StatusOK)
+	return web.Respond(r.Context(), w, list, http.StatusOK)
 }
 
 func (p *Product) Retrieve(w http.ResponseWriter, r *http.Request) error {
@@ -55,7 +55,7 @@ func (p *Product) Retrieve(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// Return the product
-	return web.Respond(w, prod, http.StatusOK)
+	return web.Respond(r.Context(), w, prod, http.StatusOK)
 }
 
 func (p *Product) Create(w http.ResponseWriter, r *http.Request) error {
@@ -72,7 +72,7 @@ func (p *Product) Create(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	return web.Respond(w, prod, http.StatusCreated)
+	return web.Respond(r.Context(), w, prod, http.StatusCreated)
 
 }
 
@@ -94,7 +94,7 @@ func (p *Product) Update(w http.ResponseWriter, r *http.Request) error {
 			return errors.Wrap(err, "updating product")
 		}
 	}
-	return web.Respond(w, nil, http.StatusNoContent)
+	return web.Respond(r.Context(), w, nil, http.StatusNoContent)
 }
 
 func (p *Product) Delete(w http.ResponseWriter, r *http.Request) error {
@@ -110,7 +110,7 @@ func (p *Product) Delete(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 
-	return web.Respond(w, nil, http.StatusNoContent)
+	return web.Respond(r.Context(), w, nil, http.StatusNoContent)
 }
 
 func (p *Product) AddSale(w http.ResponseWriter, r *http.Request) error {
@@ -128,7 +128,7 @@ func (p *Product) AddSale(w http.ResponseWriter, r *http.Request) error {
 		return errors.Wrap(err, "add sale")
 	}
 
-	return web.Respond(w, sale, http.StatusCreated)
+	return web.Respond(r.Context(), w, sale, http.StatusCreated)
 }
 
 func (p *Product) ListSales(w http.ResponseWriter, r *http.Request) error {
@@ -137,5 +137,5 @@ func (p *Product) ListSales(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return errors.Wrap(err, " gettinglist sales")
 	}
-	return web.Respond(w, list, http.StatusOK)
+	return web.Respond(r.Context(), w, list, http.StatusOK)
 }

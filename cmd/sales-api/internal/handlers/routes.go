@@ -13,7 +13,7 @@ import (
 // API creates a new web application with routes for handling Products.
 func API(logger *log.Logger, db *sqlx.DB) http.Handler {
 	// Create a new web application with the logger
-	app := web.NewApp(logger, mid.Errors(logger))
+	app := web.NewApp(logger, mid.Logger(logger), mid.Errors(logger), mid.Metrics())
 
 	// Create a new Product with the database connection and logger
 	p := &Product{DB: db, Log: logger}

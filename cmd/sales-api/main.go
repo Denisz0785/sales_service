@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	_ "expvar" // register the /debug/vars handler
 	"log"
 	"net/http"
 	_ "net/http/pprof" //register pprof handlers

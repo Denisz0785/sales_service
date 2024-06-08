@@ -19,10 +19,10 @@ func (c *Check) Health(w http.ResponseWriter, r *http.Request) error {
 
 	if err := database.StatusCheck(r.Context(), c.DB); err != nil {
 		health.Status = "database is not ready"
-		return web.Respond(w, health, http.StatusServiceUnavailable)
+		return web.Respond(r.Context(), w, health, http.StatusServiceUnavailable)
 	}
 
 	health.Status = "database is ready"
-	return web.Respond(w, health, http.StatusOK)
+	return web.Respond(r.Context(), w, health, http.StatusOK)
 
 }

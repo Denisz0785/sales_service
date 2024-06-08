@@ -1,25 +1,28 @@
 package mid
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"sales_service/internal/platform/web"
+	"time"
 )
 
-func Errors(log *log.Logger) web.Middleware {
+func Logger(log *log.Logger) web.Middleware {
 
 	f := func(before web.Handler) web.Handler {
 
 		h := func(w http.ResponseWriter, r *http.Request) error {
+			v, ok := r.Context().Value(web.KeyValues).(*web.Values)
 
-			if err := before(w, r); err != nil {
-				log.Printf("Error: %v", err)
-
-				if err := web.RespondError(r.Context(), w, err); err != nil {
-					return err
-				}
+			if !ok {
+				return errors.New("web value missing from context")
 			}
-			return nil
+
+			err := before(w, r)
+			log.Printf("%d (%v) Method: %s  URL: %s", v.StatusCode, time.Since(v.Start), r.Method, r.URL.Path)
+
+			return err
 		}
 		return h
 	}
@@ -27,6 +30,7 @@ func Errors(log *log.Logger) web.Middleware {
 
 }
 
+/*
 type ErrorResponse struct {
 	Error  string       `json:"error"`
 	Fields []FieldError `json:"fields,omitempty"`
@@ -50,3 +54,4 @@ func (e *Error) Error() string {
 func NewRequestError(err error, status int) error {
 	return &Error{Err: err, Status: status}
 }
+*/

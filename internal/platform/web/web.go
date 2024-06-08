@@ -1,14 +1,24 @@
 package web
 
 import (
+	"context"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 )
 
-// Handler is a function type that handles HTTP requests.
+type ctxKey int
 
+const KeyValues ctxKey = 1
+
+type Values struct {
+	StatusCode int
+	Start      time.Time
+}
+
+// Handler is a function type that handles HTTP requests.
 type Handler func(http.ResponseWriter, *http.Request) error
 
 // App represents the web application.
@@ -38,6 +48,12 @@ func (a *App) Handle(method, pattern string, h Handler) {
 	// fn is the actual handler function that will be registered with the router.
 	// It calls the handler function h and handles any errors.
 	fn := func(w http.ResponseWriter, r *http.Request) {
+
+		v := Values{Start: time.Now()}
+
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, KeyValues, &v)
+		r = r.WithContext(ctx)
 
 		// Call the handler function h with the request and response objects.
 		if err := h(w, r); err != nil {
