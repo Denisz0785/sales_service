@@ -19,7 +19,7 @@ type Values struct {
 }
 
 // Handler is a function type that handles HTTP requests.
-type Handler func(http.ResponseWriter, *http.Request) error
+type Handler func(context.Context, http.ResponseWriter, *http.Request) error
 
 // App represents the web application.
 type App struct {
@@ -51,12 +51,10 @@ func (a *App) Handle(method, pattern string, h Handler) {
 
 		v := Values{Start: time.Now()}
 
-		ctx := r.Context()
-		ctx = context.WithValue(ctx, KeyValues, &v)
-		r = r.WithContext(ctx)
+		ctx := context.WithValue(r.Context(), KeyValues, &v)
 
 		// Call the handler function h with the request and response objects.
-		if err := h(w, r); err != nil {
+		if err := h(ctx, w, r); err != nil {
 			// If there is an error, create an ErrorResponse object with the error message.
 			a.log.Printf("Error: Unhandled error %v", err)
 

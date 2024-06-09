@@ -45,4 +45,5 @@ func API(logger *log.Logger, db *sqlx.DB) http.Handler {
 
 	// Return the web application as an http.Handler
 	return app
+
 }

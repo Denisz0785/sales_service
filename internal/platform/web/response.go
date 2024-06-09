@@ -75,10 +75,4 @@ func RespondError(ctx context.Context, w http.ResponseWriter, err error) error {
 	return nil
 }
 
-// ErrorResponse represents an error response that is sent to the client.
-// type ErrorResponse struct {
-// 	// Error is a string representation of the error.
-// 	Error string `json:"error"`
-// 	// Fields is a map of field names to error messages.
-// 	Fields map[string]string `json:"fields,omitempty"`
-// }
+
