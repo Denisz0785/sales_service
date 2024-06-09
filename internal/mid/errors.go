@@ -1,6 +1,7 @@
 package mid
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"sales_service/internal/platform/web"
@@ -15,14 +16,14 @@ func Errors(log *log.Logger) web.Middleware {
 
 		// New handler function that wraps the input web.Handler and handles
 		// any errors that occur during its execution.
-		h := func(w http.ResponseWriter, r *http.Request) error {
+		h := func(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 
-			if err := before(w, r); err != nil {
+			if err := before(ctx, w, r); err != nil {
 				log.Printf("Error: %v", err)
 
 				// If there is an error, call the web.RespondError function
 				// to create an error response and write it to the client.
-				if err := web.RespondError(r.Context(), w, err); err != nil {
+				if err := web.RespondError(ctx, w, err); err != nil {
 					return err
 				}
 			}
@@ -33,7 +34,6 @@ func Errors(log *log.Logger) web.Middleware {
 	return f
 
 }
-
 
 type ErrorResponse struct {
 	Error  string       `json:"error"`

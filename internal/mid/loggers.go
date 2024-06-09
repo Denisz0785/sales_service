@@ -1,6 +1,7 @@
 package mid
 
 import (
+	"context"
 	"errors"
 	"log"
 	"net/http"
@@ -17,9 +18,9 @@ func Logger(log *log.Logger) web.Middleware {
 	f := func(before web.Handler) web.Handler {
 
 		// Handler function that logs the details of each HTTP request
-		h := func(w http.ResponseWriter, r *http.Request) error {
+		h := func(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 			// Get the web values from the request context
-			v, ok := r.Context().Value(web.KeyValues).(*web.Values)
+			v, ok := ctx.Value(web.KeyValues).(*web.Values)
 
 			// If the web values are missing from the context, return an error
 			if !ok {
@@ -27,7 +28,7 @@ func Logger(log *log.Logger) web.Middleware {
 			}
 
 			// Execute the next handler in the chain
-			err := before(w, r)
+			err := before(ctx, w, r)
 
 			// Log the details of the HTTP request
 			log.Printf("%d (%v) Method: %s  URL: %s", v.StatusCode, time.Since(v.Start), r.Method, r.URL.Path)

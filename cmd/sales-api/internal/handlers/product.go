@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -20,9 +21,7 @@ type Product struct {
 }
 
 // List send all products as list
-func (p *Product) List(w http.ResponseWriter, r *http.Request) error {
-
-	ctx := r.Context()
+func (p *Product) List(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 
 	list, err := product.List(ctx, p.DB)
 
@@ -32,13 +31,12 @@ func (p *Product) List(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	return web.Respond(r.Context(), w, list, http.StatusOK)
+	return web.Respond(ctx, w, list, http.StatusOK)
 }
 
-func (p *Product) Retrieve(w http.ResponseWriter, r *http.Request) error {
+func (p *Product) Retrieve(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 
 	id := chi.URLParam(r, "id")
-	ctx := r.Context()
 
 	prod, err := product.Retrieve(ctx, p.DB, id)
 
@@ -55,13 +53,12 @@ func (p *Product) Retrieve(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// Return the product
-	return web.Respond(r.Context(), w, prod, http.StatusOK)
+	return web.Respond(ctx, w, prod, http.StatusOK)
 }
 
-func (p *Product) Create(w http.ResponseWriter, r *http.Request) error {
+func (p *Product) Create(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 
 	var newProduct product.NewProduct
-	ctx := r.Context()
 
 	if err := web.Decode(r, &newProduct); err != nil {
 		return err
@@ -72,11 +69,11 @@ func (p *Product) Create(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	return web.Respond(r.Context(), w, prod, http.StatusCreated)
+	return web.Respond(ctx, w, prod, http.StatusCreated)
 
 }
 
-func (p *Product) Update(w http.ResponseWriter, r *http.Request) error {
+func (p *Product) Update(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	id := chi.URLParam(r, "id")
 
 	var update product.UpdateProduct
@@ -84,7 +81,7 @@ func (p *Product) Update(w http.ResponseWriter, r *http.Request) error {
 		return errors.Wrap(err, "decode update product")
 	}
 
-	if err := product.Update(r.Context(), p.DB, id, update, time.Now()); err != nil {
+	if err := product.Update(ctx, p.DB, id, update, time.Now()); err != nil {
 		switch err {
 		case product.ErrNotFound:
 			return web.NewRequestError(err, http.StatusNotFound)
@@ -94,13 +91,13 @@ func (p *Product) Update(w http.ResponseWriter, r *http.Request) error {
 			return errors.Wrap(err, "updating product")
 		}
 	}
-	return web.Respond(r.Context(), w, nil, http.StatusNoContent)
+	return web.Respond(ctx, w, nil, http.StatusNoContent)
 }
 
-func (p *Product) Delete(w http.ResponseWriter, r *http.Request) error {
+func (p *Product) Delete(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	id := chi.URLParam(r, "id")
 
-	err := product.Delete(r.Context(), p.DB, id)
+	err := product.Delete(ctx, p.DB, id)
 	if err != nil {
 		switch err {
 		case product.ErrInvalidID:
@@ -110,10 +107,10 @@ func (p *Product) Delete(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 
-	return web.Respond(r.Context(), w, nil, http.StatusNoContent)
+	return web.Respond(ctx, w, nil, http.StatusNoContent)
 }
 
-func (p *Product) AddSale(w http.ResponseWriter, r *http.Request) error {
+func (p *Product) AddSale(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	var newSale product.NewSale
 	if err := web.Decode(r, &newSale); err != nil {
 		return errors.Wrap(err, "decode new sale")
@@ -122,20 +119,20 @@ func (p *Product) AddSale(w http.ResponseWriter, r *http.Request) error {
 	productID := chi.URLParam(r, "id")
 	fmt.Println("productID", productID)
 
-	sale, err := product.AddSale(r.Context(), p.DB, newSale, productID, time.Now())
+	sale, err := product.AddSale(ctx, p.DB, newSale, productID, time.Now())
 
 	if err != nil {
 		return errors.Wrap(err, "add sale")
 	}
 
-	return web.Respond(r.Context(), w, sale, http.StatusCreated)
+	return web.Respond(ctx, w, sale, http.StatusCreated)
 }
 
-func (p *Product) ListSales(w http.ResponseWriter, r *http.Request) error {
+func (p *Product) ListSales(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	productID := chi.URLParam(r, "id")
-	list, err := product.ListSales(r.Context(), p.DB, productID)
+	list, err := product.ListSales(ctx, p.DB, productID)
 	if err != nil {
 		return errors.Wrap(err, " gettinglist sales")
 	}
-	return web.Respond(r.Context(), w, list, http.StatusOK)
+	return web.Respond(ctx, w, list, http.StatusOK)
 }
