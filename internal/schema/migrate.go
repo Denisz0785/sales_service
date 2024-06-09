@@ -37,6 +37,22 @@ var migrations = []darwin.Migration{
 	
 	);`,
 	},
+	{
+		Version:     3,
+		Description: "Add roles",
+		Script: `
+	CREATE TABLE users(
+		user_id	UUID,
+		name	TEXT,
+		email	TEXT UNIQUE,
+		password_hash	TEXT,
+		roles	TEXT[],
+		date_created	TIMESTAMP,
+		date_updated	TIMESTAMP,
+
+		PRIMARY KEY (user_id)
+	);`,
+	},
 }
 
 func Migrate(db *sqlx.DB) error {
