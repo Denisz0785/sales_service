@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 
 	"github.com/jmoiron/sqlx"
@@ -32,7 +33,7 @@ func OpenDB(cfg Config) (*sqlx.DB, error) {
 		Path:     cfg.Name,
 		RawQuery: q.Encode(),
 	}
-
+	fmt.Println(u.String())
 	return sqlx.Open("postgres", u.String())
 }
 

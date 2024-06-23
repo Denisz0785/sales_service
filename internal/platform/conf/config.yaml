@@ -12,3 +12,15 @@ web:
   readtimeout: "5s"
   writetimeout: "5s"
   shutdowntimeout: "5s"
+
+auth:
+
+  privatekeyfile: private.pem
+  keyid: 1
+  algorithm: RS256
+
+trace:
+
+  url: http://localhost:9411/api/v2/spans
+  service: sales-api
+  probability: 1

@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 	"sales_service/internal/platform/web"
+
+	"go.opencensus.io/trace"
 )
 
 // Errors is a middleware function that wraps the provided web.Handler and
@@ -17,6 +19,8 @@ func Errors(log *log.Logger) web.Middleware {
 		// New handler function that wraps the input web.Handler and handles
 		// any errors that occur during its execution.
 		h := func(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+			ctx, span := trace.StartSpan(ctx, "internal.mid.Errors")
+			defer span.End()
 
 			if err := before(ctx, w, r); err != nil {
 				log.Printf("Error: %v", err)

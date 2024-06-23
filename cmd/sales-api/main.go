@@ -2,21 +2,29 @@ package main
 
 import (
 	"context"
+	"crypto/rsa"
 	_ "expvar" // register the /debug/vars handler
+	"fmt"
 	"log"
 	"net/http"
 	_ "net/http/pprof" //register pprof handlers
 	"os"
 	"os/signal"
 	"sales_service/cmd/sales-api/internal/handlers"
+	"sales_service/internal/platform/auth"
 	"sales_service/internal/platform/database"
 	"syscall"
 	"time"
 
+	"contrib.go.opencensus.io/exporter/zipkin"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/go-faster/errors"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	openzipkin "github.com/openzipkin/zipkin-go"
+	zipkinHTTP "github.com/openzipkin/zipkin-go/reporter/http"
 	"github.com/spf13/viper"
+	"go.opencensus.io/trace"
 )
 
 func main() {
@@ -41,8 +49,17 @@ func run() error {
 			WriteTimeout    time.Duration
 			ShutdownTimeout time.Duration
 		}
+		Auth struct {
+			PrivateKeyFile string //`conf:"default:private.pem"`
+			KeyID          string //`conf:"default:1"`
+			Algorithm      string //`conf:"default:RS256"`
+		}
+		Trace struct {
+			URL         string  //`conf:"default:http://localhost:9411/api/v2/spans"`
+			Service     string  //`conf:"default:sales-api"`
+			Probability float64 //`conf:"default:1"`
+		}
 	}
-
 	log.Println("started")
 	defer log.Println("finished")
 
@@ -61,6 +78,20 @@ func run() error {
 	cfg.DB.DisableTLS = viper.GetString("db.disableTLS")
 	cfg.DB.Password = os.Getenv("DB_PASSWORD")
 
+	cfg.Auth.Algorithm = viper.GetString("auth.algorithm")
+	cfg.Auth.KeyID = viper.GetString("auth.keyID")
+	cfg.Auth.PrivateKeyFile = viper.GetString("auth.privateKeyFile")
+
+	authenticator, err := createAuth(
+		cfg.Auth.PrivateKeyFile,
+		cfg.Auth.KeyID,
+		cfg.Auth.Algorithm,
+	)
+
+	if err != nil {
+		return errors.Wrap(err, "error creating authenticator")
+	}
+
 	db, err := database.OpenDB(database.Config{
 		Host:       cfg.DB.Host,
 		User:       cfg.DB.User,
@@ -73,10 +104,31 @@ func run() error {
 	}
 	defer db.Close()
 
+	cfg.Web.Address = viper.GetString("web.address")
+	cfg.Trace.Probability = viper.GetFloat64("trace.probability")
+	cfg.Trace.URL = viper.GetString("trace.url")
+	cfg.Trace.Service = viper.GetString("trace.service")
+
+	fmt.Println("test", cfg.Trace.URL, cfg.Trace.Service, cfg.Trace.Probability, cfg.Web.Address)
+
+	// start tracing
+	closer, err := registerTracer(
+		cfg.Trace.Service,
+		cfg.Web.Address,
+		cfg.Trace.URL,
+		cfg.Trace.Probability,
+	)
+
+	if err != nil {
+		return errors.Wrap(err, "error registering tracer")
+	}
+
+	defer closer()
+
 	cfg.Web.ReadTimeout = viper.GetDuration("web.readtimeout")
 	cfg.Web.WriteTimeout = viper.GetDuration("web.writetimeout")
 	cfg.Web.ShutdownTimeout = viper.GetDuration("web.shutdowntimeout")
-	cfg.Web.Address = viper.GetString("web.address")
+	// cfg.Web.Address = viper.GetString("web.address")
 	cfg.Web.Debug = viper.GetString("web.debug")
 
 	// start Debug Service
@@ -90,7 +142,7 @@ func run() error {
 
 	api := http.Server{
 		Addr:         cfg.Web.Address,
-		Handler:      handlers.API(log, db),
+		Handler:      handlers.API(log, db, authenticator),
 		ReadTimeout:  cfg.Web.ReadTimeout,
 		WriteTimeout: cfg.Web.WriteTimeout,
 	}
@@ -131,4 +183,40 @@ func initConfig() error {
 	viper.AddConfigPath("internal/platform/conf")
 	viper.SetConfigName("config")
 	return viper.ReadInConfig()
+}
+
+// createAuth creates an authenticator using the provided private key file, key ID, and algorithm.
+// It returns the authenticator and any error encountered.
+func createAuth(privateKeyFile, keyID, algorithm string) (*auth.Authenticator, error) {
+	// Read the contents of the private key file.
+	keyContents, err := os.ReadFile(privateKeyFile)
+	if err != nil {
+		return nil, errors.Wrap(err, "reading private key file")
+	}
+
+	// Parse the private key from the file contents.
+	key, err := jwt.ParseRSAPrivateKeyFromPEM(keyContents)
+	if err != nil {
+		return nil, errors.Wrap(err, "parsing private key file")
+	}
+
+	// Create a public key lookup function using the key ID and public key.
+	public := auth.NewSimpleKeyLookupFunc(keyID, key.Public().(*rsa.PublicKey))
+
+	// Create and return the authenticator using the key, key ID, algorithm, and public key lookup function.
+	return auth.NewAuthenticator(key, keyID, algorithm, public)
+}
+
+func registerTracer(service, httpAddr, traceURL string, probability float64) (func() error, error) {
+	localEndPoint, err := openzipkin.NewEndpoint(service, httpAddr)
+	if err != nil {
+		return nil, errors.Wrap(err, "creating the local zipkinEndpoint")
+	}
+
+	reporter := zipkinHTTP.NewReporter(traceURL)
+
+	trace.RegisterExporter(zipkin.NewExporter(reporter, localEndPoint))
+	trace.ApplyConfig(trace.Config{DefaultSampler: trace.ProbabilitySampler(probability)})
+
+	return reporter.Close, nil
 }

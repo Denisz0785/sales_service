@@ -7,6 +7,9 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"go.opencensus.io/plugin/ochttp"
+	"go.opencensus.io/plugin/ochttp/propagation/tracecontext"
+	"go.opencensus.io/trace"
 )
 
 type ctxKey int
@@ -16,6 +19,7 @@ const KeyValues ctxKey = 1
 type Values struct {
 	StatusCode int
 	Start      time.Time
+	TraceID    string
 }
 
 // Handler is a function type that handles HTTP requests.
@@ -28,20 +32,30 @@ type App struct {
 	// Log is the logger for logging information.
 	log *log.Logger
 	mw  []Middleware
+	och *ochttp.Handler
 }
 
 // NewApp creates a new web application.
 func NewApp(logger *log.Logger, mw ...Middleware) *App {
-	return &App{
+	app := &App{
 		mux: chi.NewRouter(), // Initialize a new router.
 		log: logger,
 		mw:  mw, // Set the logger.
 	}
+
+	app.och = &ochttp.Handler{
+		Propagation: &tracecontext.HTTPFormat{},
+		Handler:     app.mux,
+	}
+
+	return app
 }
 
 // Handle registers a new route with a matcher for the HTTP method
 // and the pattern.
-func (a *App) Handle(method, pattern string, h Handler) {
+func (a *App) Handle(method, pattern string, h Handler, mw ...Middleware) {
+
+	h = wrapMiddleware(mw, h)
 
 	h = wrapMiddleware(a.mw, h)
 
@@ -49,9 +63,14 @@ func (a *App) Handle(method, pattern string, h Handler) {
 	// It calls the handler function h and handles any errors.
 	fn := func(w http.ResponseWriter, r *http.Request) {
 
-		v := Values{Start: time.Now()}
+		ctx, span := trace.StartSpan(r.Context(), "internal.platform.web")
+		defer span.End()
 
-		ctx := context.WithValue(r.Context(), KeyValues, &v)
+		v := Values{
+			Start:   time.Now(),
+			TraceID: span.SpanContext().TraceID.String(),
+		}
+		ctx = context.WithValue(ctx, KeyValues, &v)
 
 		// Call the handler function h with the request and response objects.
 		if err := h(ctx, w, r); err != nil {
@@ -59,6 +78,7 @@ func (a *App) Handle(method, pattern string, h Handler) {
 			a.log.Printf("Error: Unhandled error %v", err)
 
 		}
+
 	}
 
 	// Register the route with the router.
@@ -71,5 +91,5 @@ func (a *App) Handle(method, pattern string, h Handler) {
 func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Call the ServeHTTP method of the router to handle the request.
 	// The router routes the request to the appropriate handler function.
-	a.mux.ServeHTTP(w, r)
+	a.och.ServeHTTP(w, r)
 }

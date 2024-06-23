@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"runtime"
 	"sales_service/internal/platform/web"
+
+	"go.opencensus.io/trace"
 )
 
 var m = struct {
@@ -26,6 +28,8 @@ func Metrics() web.Middleware {
 		// The new handler function that wraps the input web.Handler and
 		// handles the metrics.
 		h := func(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+			ctx, span := trace.StartSpan(ctx, "internal.mid.Metricks")
+			defer span.End()
 
 			// Call the next handler in the chain.
 			err := before(ctx, w, r)

@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"sales_service/internal/platform/web"
 	"time"
+
+	"go.opencensus.io/trace"
 )
 
 // Logger is a middleware that logs the details of each HTTP request.
@@ -19,6 +21,9 @@ func Logger(log *log.Logger) web.Middleware {
 
 		// Handler function that logs the details of each HTTP request
 		h := func(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+			ctx, span := trace.StartSpan(ctx, "internal.mid.Log")
+			defer span.End()
+
 			// Get the web values from the request context
 			v, ok := ctx.Value(web.KeyValues).(*web.Values)
 
@@ -31,7 +36,10 @@ func Logger(log *log.Logger) web.Middleware {
 			err := before(ctx, w, r)
 
 			// Log the details of the HTTP request
-			log.Printf("%d (%v) Method: %s  URL: %s", v.StatusCode, time.Since(v.Start), r.Method, r.URL.Path)
+			log.Printf("%s : (%d) : %s %s -> %s (%s)",
+				v.TraceID, v.StatusCode, r.Method, r.URL.Path,
+				r.RemoteAddr, time.Since(v.Start),
+			)
 
 			// Return the error, if any, from the next handler in the chain
 			return err

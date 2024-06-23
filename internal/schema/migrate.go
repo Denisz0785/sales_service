@@ -53,6 +53,14 @@ var migrations = []darwin.Migration{
 		PRIMARY KEY (user_id)
 	);`,
 	},
+	{
+		Version:     4,
+		Description: "Add user column to products",
+		Script: `
+	ALTER TABLE products
+		ADD COLUMN user_id UUID DEFAULT '00000000-0000-0000-0000-000000000000'
+		`,
+	},
 }
 
 func Migrate(db *sqlx.DB) error {

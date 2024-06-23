@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sales_service/internal/platform/auth"
 	"sales_service/internal/platform/web"
 	"sales_service/internal/product"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-faster/errors"
 	"github.com/jmoiron/sqlx"
+	"go.opencensus.io/trace"
 )
 
 // Product has methods for dealing with Products
@@ -22,6 +24,8 @@ type Product struct {
 
 // List send all products as list
 func (p *Product) List(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	ctx, span := trace.StartSpan(ctx, "handlers.Product.List")
+	defer span.End()
 
 	list, err := product.List(ctx, p.DB)
 
@@ -60,11 +64,18 @@ func (p *Product) Create(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 	var newProduct product.NewProduct
 
+	claims, ok := ctx.Value(auth.Key).(auth.Claims)
+	if !ok {
+		return errors.New("claims missing from request context")
+	}
+
 	if err := web.Decode(r, &newProduct); err != nil {
 		return err
 	}
 
-	prod, err := product.Create(ctx, p.DB, newProduct, time.Now())
+	fmt.Println("newProduct", newProduct)
+
+	prod, err := product.Create(ctx, p.DB, claims, newProduct, time.Now())
 	if err != nil {
 		return err
 	}
@@ -81,12 +92,19 @@ func (p *Product) Update(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return errors.Wrap(err, "decode update product")
 	}
 
-	if err := product.Update(ctx, p.DB, id, update, time.Now()); err != nil {
+	claims, ok := ctx.Value(auth.Key).(auth.Claims)
+	if !ok {
+		return errors.New("claims missing from request context")
+	}
+
+	if err := product.Update(ctx, p.DB, claims, id, update, time.Now()); err != nil {
 		switch err {
 		case product.ErrNotFound:
 			return web.NewRequestError(err, http.StatusNotFound)
 		case product.ErrInvalidID:
 			return web.NewRequestError(err, http.StatusBadRequest)
+		case product.ErrForbidden:
+			return web.NewRequestError(err, http.StatusForbidden)
 		default:
 			return errors.Wrap(err, "updating product")
 		}

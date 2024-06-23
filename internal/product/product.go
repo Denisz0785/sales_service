@@ -3,6 +3,8 @@ package product
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"sales_service/internal/platform/auth"
 	"time"
 
 	"github.com/go-faster/errors"
@@ -13,6 +15,7 @@ import (
 var (
 	ErrNotFound  = errors.New("product not found")
 	ErrInvalidID = errors.New("invalid product ID format")
+	ErrForbidden = errors.New("action not allowed")
 )
 
 // List retrieves all products from the database.
@@ -21,12 +24,12 @@ func List(ctx context.Context, db *sqlx.DB) ([]Product, error) {
 	var list []Product
 
 	// Define the SQL query to retrieve all products.
-	const query = `select p.id, p.name, p.cost, p.quantity,
+	const query = `select p.id, p.name, p.cost, p.user_id,p.quantity,
 	COALESCE(SUM(s.paid),0) as revenue,
 	COALESCE(SUM(s.quantity),0) AS sold,
 	p.date_created, p.date_updated from products AS p
 	LEFT JOIN sales AS s ON p.id = s.product_id 
-	Group BY p.id, p.name, p.cost, p.quantity, p.date_created, p.date_updated`
+	Group BY p.id, p.name, p.cost, p.quantity, p.user_id,p.date_created, p.date_updated`
 
 	// Use the Select method of the sqlx.DB connection to execute the query
 	// and store the result in the list variable.
@@ -74,20 +77,21 @@ func Retrieve(ctx context.Context, db *sqlx.DB, id string) (*Product, error) {
 }
 
 // Create inserts a new product into the database
-func Create(ctx context.Context, db *sqlx.DB, newProduct NewProduct, currentTime time.Time) (*Product, error) {
+func Create(ctx context.Context, db *sqlx.DB, user auth.Claims, newProduct NewProduct, currentTime time.Time) (*Product, error) {
 	product := &Product{
 		ID:          uuid.New().String(),
 		Name:        newProduct.Name,
 		Cost:        newProduct.Cost,
 		Quantity:    newProduct.Quantity,
+		UserID:      user.Subject,
 		DateCreated: currentTime,
 		DateUpdated: currentTime,
 	}
 
-	const query = `INSERT INTO products(id, name, cost, quantity, date_created, date_updated) VALUES($1, $2, $3, $4, $5, $6) RETURNING *`
+	const query = `INSERT INTO products(id, name, cost, quantity, user_id, date_created, date_updated) VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING *`
 	productFromDB := make([]Product, 1)
 
-	err := db.SelectContext(ctx, &productFromDB, query, product.ID, product.Name, product.Cost, product.Quantity, product.DateCreated, product.DateUpdated)
+	err := db.SelectContext(ctx, &productFromDB, query, product.ID, product.Name, product.Cost, product.Quantity, product.UserID, product.DateCreated, product.DateUpdated)
 	if err != nil {
 		return nil, errors.Wrapf(err, "inserting product: %v", product)
 	}
@@ -95,12 +99,19 @@ func Create(ctx context.Context, db *sqlx.DB, newProduct NewProduct, currentTime
 	return &productFromDB[0], nil
 }
 
-func Update(ctx context.Context, db *sqlx.DB, id string, update UpdateProduct, now time.Time) error {
+func Update(ctx context.Context, db *sqlx.DB, user auth.Claims, id string, update UpdateProduct, now time.Time) error {
 
 	product, err := Retrieve(ctx, db, id)
 	if err != nil {
 		return errors.Wrap(err, "updating product")
 	}
+
+	fmt.Println("userID", product.UserID)
+	fmt.Println("subject", user.Subject)
+	if !user.HasRole(auth.RoleAdmin) && product.UserID != user.Subject {
+		return ErrForbidden
+	}
+
 	if update.Name != nil {
 		product.Name = *update.Name
 	}
