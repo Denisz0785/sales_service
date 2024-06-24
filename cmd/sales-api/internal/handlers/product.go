@@ -24,6 +24,13 @@ type Product struct {
 
 // List send all products as list
 func (p *Product) List(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	
+	// The function starts a new span to trace the execution of the handler function.
+	// It then retrieves all products from the database using the product.List function and stores the result in the 'list' variable.
+	// If there is an error retrieving the products, it writes an error status code to the response and logs the error.
+	// Finally, it sends the list of products in the response using the web.Respond function.
+	// The function returns the error encountered during the execution of these steps.
+
 	ctx, span := trace.StartSpan(ctx, "handlers.Product.List")
 	defer span.End()
 
@@ -66,7 +73,7 @@ func (p *Product) Create(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 	claims, ok := ctx.Value(auth.Key).(auth.Claims)
 	if !ok {
-		return errors.New("claims missing from request context")
+		return web.NewShutdownError("claims missing from request context")
 	}
 
 	if err := web.Decode(r, &newProduct); err != nil {

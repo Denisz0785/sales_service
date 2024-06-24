@@ -3,6 +3,7 @@ package handlers
 import (
 	"log"
 	"net/http"
+	"os"
 
 	mid "sales_service/internal/mid"
 	"sales_service/internal/platform/auth"
@@ -12,9 +13,9 @@ import (
 )
 
 // API creates a new web application with routes for handling Products.
-func API(logger *log.Logger, db *sqlx.DB, authenticator *auth.Authenticator) http.Handler {
+func API(shutdown chan os.Signal, logger *log.Logger, db *sqlx.DB, authenticator *auth.Authenticator) http.Handler {
 	// Create a new web application with the logger
-	app := web.NewApp(logger, mid.Logger(logger), mid.Errors(logger), mid.Metrics())
+	app := web.NewApp(shutdown, logger, mid.Logger(logger), mid.Errors(logger), mid.Metrics(), mid.Panics())
 
 	// Create a new Product with the database connection and logger
 	p := &Product{DB: db, Log: logger}

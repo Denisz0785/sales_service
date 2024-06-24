@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rsa"
 	_ "expvar" // register the /debug/vars handler
-	"fmt"
 	"log"
 	"net/http"
 	_ "net/http/pprof" //register pprof handlers
@@ -50,14 +49,14 @@ func run() error {
 			ShutdownTimeout time.Duration
 		}
 		Auth struct {
-			PrivateKeyFile string //`conf:"default:private.pem"`
-			KeyID          string //`conf:"default:1"`
-			Algorithm      string //`conf:"default:RS256"`
+			PrivateKeyFile string
+			KeyID          string
+			Algorithm      string
 		}
 		Trace struct {
-			URL         string  //`conf:"default:http://localhost:9411/api/v2/spans"`
-			Service     string  //`conf:"default:sales-api"`
-			Probability float64 //`conf:"default:1"`
+			URL         string
+			Service     string
+			Probability float64
 		}
 	}
 	log.Println("started")
@@ -109,8 +108,6 @@ func run() error {
 	cfg.Trace.URL = viper.GetString("trace.url")
 	cfg.Trace.Service = viper.GetString("trace.service")
 
-	fmt.Println("test", cfg.Trace.URL, cfg.Trace.Service, cfg.Trace.Probability, cfg.Web.Address)
-
 	// start tracing
 	closer, err := registerTracer(
 		cfg.Trace.Service,
@@ -139,10 +136,12 @@ func run() error {
 			log.Printf("Debug service error: %v", err)
 		}
 	}()
+	shutdown := make(chan os.Signal, 1)
+	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
 
 	api := http.Server{
 		Addr:         cfg.Web.Address,
-		Handler:      handlers.API(log, db, authenticator),
+		Handler:      handlers.API(shutdown, log, db, authenticator),
 		ReadTimeout:  cfg.Web.ReadTimeout,
 		WriteTimeout: cfg.Web.WriteTimeout,
 	}
@@ -155,14 +154,11 @@ func run() error {
 		serverErrors <- api.ListenAndServe()
 	}()
 
-	shutdown := make(chan os.Signal, 1)
-	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
-
 	select {
 	case err := <-serverErrors:
 		errors.Wrap(err, "error of run and listennig server")
-	case <-shutdown:
-		log.Println("starting shutdown")
+	case sig := <-shutdown:
+		log.Printf("starting shutdown %v", sig)
 
 		ctx, cancel := context.WithTimeout(context.Background(), cfg.Web.ShutdownTimeout)
 		defer cancel()
@@ -174,6 +170,9 @@ func run() error {
 		}
 		if err != nil {
 			return errors.Wrap(err, "could not stop server gracefully")
+		}
+		if sig == syscall.SIGSTOP {
+			return errors.New("integrity error detected, shutting down immediately")
 		}
 	}
 	return nil
@@ -207,16 +206,24 @@ func createAuth(privateKeyFile, keyID, algorithm string) (*auth.Authenticator, e
 	return auth.NewAuthenticator(key, keyID, algorithm, public)
 }
 
+// registerTracer registers a Zipkin tracer with the provided service name, HTTP address, trace URL, and probability of sampling.
+// It returns a function to close the tracer and any error encountered.
 func registerTracer(service, httpAddr, traceURL string, probability float64) (func() error, error) {
+	// Create a new Zipkin endpoint with the provided service name and HTTP address.
 	localEndPoint, err := openzipkin.NewEndpoint(service, httpAddr)
 	if err != nil {
 		return nil, errors.Wrap(err, "creating the local zipkinEndpoint")
 	}
 
+	// Create a new Zipkin HTTP reporter with the provided trace URL.
 	reporter := zipkinHTTP.NewReporter(traceURL)
 
+	// Register the Zipkin exporter with the provided endpoint.
 	trace.RegisterExporter(zipkin.NewExporter(reporter, localEndPoint))
+
+	// Apply a configuration with the provided probability of sampling.
 	trace.ApplyConfig(trace.Config{DefaultSampler: trace.ProbabilitySampler(probability)})
 
+	// Return a function to close the reporter and any error encountered.
 	return reporter.Close, nil
 }

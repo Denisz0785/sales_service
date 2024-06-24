@@ -4,6 +4,8 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
+	"syscall"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -30,17 +32,19 @@ type App struct {
 	// mux is the router for handling HTTP requests.
 	mux *chi.Mux
 	// Log is the logger for logging information.
-	log *log.Logger
-	mw  []Middleware
-	och *ochttp.Handler
+	log      *log.Logger
+	mw       []Middleware
+	och      *ochttp.Handler
+	shutdown chan os.Signal
 }
 
 // NewApp creates a new web application.
-func NewApp(logger *log.Logger, mw ...Middleware) *App {
+func NewApp(shutdown chan os.Signal, logger *log.Logger, mw ...Middleware) *App {
 	app := &App{
-		mux: chi.NewRouter(), // Initialize a new router.
-		log: logger,
-		mw:  mw, // Set the logger.
+		mux:      chi.NewRouter(), // Initialize a new router.
+		log:      logger,
+		mw:       mw,
+		shutdown: shutdown,
 	}
 
 	app.och = &ochttp.Handler{
@@ -75,8 +79,10 @@ func (a *App) Handle(method, pattern string, h Handler, mw ...Middleware) {
 		// Call the handler function h with the request and response objects.
 		if err := h(ctx, w, r); err != nil {
 			// If there is an error, create an ErrorResponse object with the error message.
-			a.log.Printf("Error: Unhandled error %v", err)
-
+			a.log.Printf("%s: Unhandled error %+v", v.TraceID, err)
+			if IsShutdown(err) {
+				a.SignalShutdown()
+			}
 		}
 
 	}
@@ -92,4 +98,10 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Call the ServeHTTP method of the router to handle the request.
 	// The router routes the request to the appropriate handler function.
 	a.och.ServeHTTP(w, r)
+}
+
+// SignalShutdown is used to gracefully shut down the server.
+func (a *App) SignalShutdown() {
+	a.log.Println("initiating shutdown")
+	a.shutdown <- syscall.SIGSTOP
 }

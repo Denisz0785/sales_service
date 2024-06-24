@@ -42,6 +42,8 @@ func Authenticate(authenticator *auth.Authenticator) web.Middleware {
 				return web.NewRequestError(err, http.StatusUnauthorized)
 			}
 			span.End()
+
+			_ = claims
 			// Add the claims to the request context.
 			ctx = context.WithValue(ctx, auth.Key, claims)
 

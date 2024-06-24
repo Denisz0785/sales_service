@@ -2,7 +2,6 @@ package mid
 
 import (
 	"context"
-	"errors"
 	"log"
 	"net/http"
 	"sales_service/internal/platform/web"
@@ -29,7 +28,7 @@ func Logger(log *log.Logger) web.Middleware {
 
 			// If the web values are missing from the context, return an error
 			if !ok {
-				return errors.New("web value missing from context")
+				return web.NewShutdownError("web value missing from context")
 			}
 
 			// Execute the next handler in the chain

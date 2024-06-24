@@ -23,11 +23,14 @@ func Errors(log *log.Logger) web.Middleware {
 			defer span.End()
 
 			if err := before(ctx, w, r); err != nil {
-				log.Printf("Error: %v", err)
+				log.Printf("Error: %+v", err)
 
 				// If there is an error, call the web.RespondError function
 				// to create an error response and write it to the client.
 				if err := web.RespondError(ctx, w, err); err != nil {
+					return err
+				}
+				if web.IsShutdown(err) {
 					return err
 				}
 			}
